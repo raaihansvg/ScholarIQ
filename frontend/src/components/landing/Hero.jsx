@@ -69,7 +69,6 @@ export default function Hero({ onStart }) {
         </motion.div>
       </div>
 
-      {/* Marquee ticker */}
       <div
         className="absolute inset-x-0 bottom-0 overflow-hidden border-y border-white/[0.018] bg-[#181819]/75 py-2.5"
         aria-label="Prediction notice"
