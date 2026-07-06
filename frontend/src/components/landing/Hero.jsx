@@ -22,8 +22,6 @@ export default function Hero({ onStart }) {
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.055),rgba(255,255,255,0.018)_34%,rgba(255,255,255,0)_68%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.012),rgba(255,255,255,0)_24%,rgba(0,0,0,0.1)_100%)]" />
-
-      {/* Floating gradient orbs */}
       <div className="pointer-events-none absolute left-[15%] top-[18%] h-[220px] w-[220px] animate-float-slow rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.04),transparent_70%)] blur-2xl" />
       <div className="pointer-events-none absolute right-[12%] top-[25%] h-[180px] w-[180px] animate-float-slow-reverse rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.03),transparent_70%)] blur-2xl" />
       <div className="pointer-events-none absolute bottom-[20%] left-[40%] h-[260px] w-[260px] animate-glow-pulse rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.025),transparent_65%)] blur-3xl" />
