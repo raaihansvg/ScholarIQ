@@ -1,43 +1,106 @@
-# ScholarIQ
+![ScholarIQ Demo](demo.jpeg)
 
-Platform prediksi estimasi IPK berbasis machine learning untuk mahasiswa.
-Terdiri dari backend **FastAPI** (menyajikan model `.pkl` yang sudah dilatih)
-dan frontend **React + Vite + Tailwind CSS + Framer Motion**.
+# DOKUMENTASI SISTEM SCHOLARIQ
 
-Model: `Pipeline(StandardScaler + LinearRegression)`, R² validasi 0.596,
-RMSE 0.409. Ini sudah diverifikasi cocok dengan urutan fitur, koefisien,
-dan skala training pada spesifikasi proyek.
+## Document Control
+| Item | Description |
+|---|---|
+| **Document Title** | Dokumentasi Teknis dan Analisis Sistem ScholarIQ |
+| **System Name** | ScholarIQ |
+| **Version** | 1.0 |
+| **Date** | 2026-07-06 |
+| **Documentation Standard** | Structured technical documentation for Machine Learning Application |
+| **Scope** | Architecture, Machine Learning Model, API, Operational Commands, and System Scope |
 
 ---
 
-## Struktur Proyek
+## 1. Executive Summary
 
+ScholarIQ adalah platform aplikasi web cerdas (AI-powered) yang bertujuan untuk memprediksi estimasi Indeks Prestasi Kumulatif (IPK) mahasiswa berdasarkan riwayat akademik, kebiasaan belajar, dan faktor gaya hidup. Sistem ini menyediakan antarmuka pengguna yang modern dan interaktif untuk mengumpulkan data serta menyajikan hasil prediksi secara visual (gauge meter 0-4).
+
+Sistem dibangun dengan arsitektur pemisahan *frontend* dan *backend* yang jelas:
+
+| Layer | Implementation |
+|---|---|
+| **Frontend** | React, Vite, Tailwind CSS, Framer Motion |
+| **Backend** | Python, FastAPI, Uvicorn |
+| **Machine Learning** | Scikit-Learn (Pipeline: StandardScaler + LinearRegression), Pandas, Joblib |
+| **Validation** | Pydantic (Backend request validation) |
+
+---
+
+## 2. System Scope
+
+### 2.1 In Scope
+Sistem ini memfasilitasi fungsionalitas berikut:
+- **Landing Page**: Perkenalan platform ScholarIQ, cara kerja 3 langkah, dan *disclaimer* batasan model.
+- **Multi-step Form**: Pengumpulan data melalui 3 tahap (Riwayat Akademik → Kebiasaan Belajar → Gaya Hidup & Kesejahteraan).
+- **Hasil Estimasi**: Menyajikan estimasi IPK dalam bentuk rentang nilai, visualisasi *gauge*, serta daftar faktor yang paling berpengaruh.
+- **API Endpoint**: Endpoint `POST /predict` untuk memproses payload dan mengeksekusi model *machine learning* secara *real-time*.
+
+### 2.2 Keterbatasan (Limitations)
+- Model regresi linear memiliki **R² 0.596** (RMSE 0.409). Ini berarti sekitar ~60% variasi IPK dapat dijelaskan oleh model, sedangkan sisanya dipengaruhi faktor-faktor eksternal lain di luar jangkauan aplikasi.
+- Sistem saat ini difokuskan pada prediksi statis menggunakan file `.pkl` dan tidak melakukan *training* ulang model secara mandiri di sisi server (Out of Scope untuk *Continuous Training* otomatis).
+
+---
+
+## 3. Architecture
+
+Arsitektur menggunakan pemisahan modular *monorepo-style*:
+
+```text
+ScholarIQ/
+  ├── backend/      # FastAPI Server, Model Inference (.pkl), Pydantic Schemas
+  └── frontend/     # Vite React SPA, Tailwind UI Components, Framer Motion Animations
 ```
-scholariq/
-├── backend/      # FastAPI: load model, endpoint /predict, dokumentasi otomatis di /docs
-└── frontend/     # React: landing page, form multi-step, halaman hasil
-```
 
-## Menjalankan Backend
+### 3.1 Backend Layer Responsibilities
+| Layer | Responsibility | Example |
+|---|---|---|
+| **Entry Point** | Konfigurasi FastAPI, CORS Middleware, dan Lifespan (Load Model) | `main.py` |
+| **Predictor** | Eksekusi model Scikit-Learn `.pkl` dari *disk* | `predictor.py` |
+| **Schemas** | Validasi input dari frontend (Tipe data, range nilai) | `schemas.py` |
+| **Config** | Manajemen environment variables (Allowed Origins) | `config.py` |
 
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-```
+### 3.2 Frontend Architecture
+Frontend merupakan Single Page Application (SPA) yang digerakkan oleh React:
+- **Routing**: Dikelola secara internal untuk transisi antar halaman (Landing Page -> Form -> Result).
+- **Styling**: Memanfaatkan *utility-class* Tailwind CSS untuk desain yang modern, *clean*, dan responsif.
+- **API Client**: Mengirim HTTP request langsung ke backend FastAPI melalui URL yang didefinisikan pada `.env`.
 
-- API berjalan di `http://localhost:8000`
-- Dokumentasi interaktif (Swagger) di `http://localhost:8000/docs`
-- Endpoint utama: `POST /predict`
+---
 
-Catatan versi: model dilatih dengan scikit-learn 1.6.1. `requirements.txt`
-sudah mengunci versi ini agar pipeline (termasuk `StandardScaler` di
-dalamnya) ter-load tanpa masalah kompatibilitas.
+## 4. Data & Machine Learning Architecture
 
-### Contoh request
+### 4.1 Machine Learning Pipeline
+- **Dependencies**: Terkunci pada `scikit-learn==1.6.1` dan `pandas==2.2.3` untuk menjamin kompatibilitas pemuatan (deserialization) file model `.pkl` menggunakan `joblib`.
+- **Pipeline Structure**: `Pipeline(steps=[('scaler', StandardScaler()), ('model', LinearRegression())])`.
+- **Preprocessing Khusus**: Fitur `attendance_rate` dikirim sebagai persentase (0-100) dari Frontend, namun Backend secara otomatis mengonversinya menjadi proporsi (0-1) sebelum diproses oleh model.
 
+### 4.2 Data Features
+Model memproses 8 fitur input:
+1. `previous_gpa` (Float: 0.0 - 4.0)
+2. `digital_literacy` (Integer: skala 1-10)
+3. `attendance_rate` (Integer/Float: 0-100 persen)
+4. `revision_hours` (Float)
+5. `study_hours_daily` (Float)
+6. `screen_time` (Float)
+7. `online_course_hours` (Float)
+8. `mental_stress` (Integer: skala 1-10)
+
+---
+
+## 5. API Specification Summary
+
+### 5.1 Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| **GET** | `/health` | Memeriksa status kesehatan server dan memastikan model berhasil di-*load*. |
+| **GET** | `/` | Alias untuk endpoint `/health`. |
+| **POST** | `/predict` | Memproses payload data JSON dan mengembalikan JSON berisi hasil estimasi IPK. |
+
+### 5.2 Contoh Payload Request
 ```bash
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
@@ -53,43 +116,34 @@ curl -X POST http://localhost:8000/predict \
   }'
 ```
 
-`attendance_rate` dikirim dalam **persen (0-100)** — backend yang
-mengonversinya ke proporsi 0-1 sebelum masuk ke model.
+---
 
-## Menjalankan Frontend
+## 6. Operational Commands
 
+### 6.1 Menjalankan Backend (FastAPI)
+Buka terminal, masuk ke direktori utama proyek, lalu jalankan:
+```bash
+source venv/bin/activate
+cd backend
+uvicorn main:app --reload
+```
+- API akan berjalan di: `http://localhost:8000`
+- Dokumentasi interaktif (Swagger UI) otomatis tersedia di: `http://localhost:8000/docs`
+
+### 6.2 Menjalankan Frontend (React/Vite)
+Buka terminal baru, masuk ke direktori utama proyek, lalu jalankan:
 ```bash
 cd frontend
-npm install
-cp .env.example .env    # sesuaikan VITE_API_BASE_URL bila backend tidak di localhost:8000
 npm run dev
 ```
+Frontend akan berjalan secara default di: `http://localhost:5173`
 
-Frontend berjalan di `http://localhost:5173` (default Vite) dan akan
-memanggil backend di `VITE_API_BASE_URL` (default `http://localhost:8000`).
-
-## Build untuk Production
-
+### 6.3 Build & Deploy Production
+Untuk mempersiapkan Frontend menuju tahap produksi:
 ```bash
 cd frontend
-npm run build       # menghasilkan folder dist/ siap deploy (Vercel, Netlify, dll)
+npm run build
 ```
+*(Menghasilkan folder `dist/` yang siap di-deploy ke Vercel, Netlify, atau layanan hosting statis lainnya).*
 
-Untuk backend, deploy sebagai layanan Python biasa (Railway, Render, Fly.io,
-VPS + gunicorn/uvicorn). Pastikan environment variable
-`SCHOLARIQ_ALLOWED_ORIGINS` diisi dengan domain frontend yang sebenarnya
-(pisahkan dengan koma jika lebih dari satu), menggantikan default `*`.
-
-## Alur Aplikasi
-
-1. **Landing Page** — perkenalan ScholarIQ, cara kerja 3 langkah, disclaimer, CTA.
-2. **Form 3 Langkah** — Riwayat Akademik → Kebiasaan Belajar → Gaya Hidup & Kesejahteraan.
-3. **Halaman Hasil** — estimasi IPK dalam bentuk rentang, gauge visual 0-4,
-   daftar faktor paling berpengaruh, dan disclaimer akhir.
-
-## Keterbatasan yang Perlu Diketahui
-
-Model ini memiliki R² 0.596 — artinya sekitar 60% variasi IPK bisa
-dijelaskan oleh fitur yang tersedia, sisanya dipengaruhi faktor lain
-di luar model. Ini sudah dikomunikasikan secara eksplisit ke pengguna
-lewat disclaimer di landing page dan halaman hasil.
+Untuk mendeploy Backend di *cloud* (Render, Railway, VPS, dll), pastikan *environment variable* `SCHOLARIQ_ALLOWED_ORIGINS` diisi dengan domain frontend (produksi) Anda yang sebenarnya.
